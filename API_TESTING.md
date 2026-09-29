@@ -66,13 +66,16 @@ Catatan role:
 
 ### Create Product
 
+Jangan kirim `kodeProduk` untuk menggunakan kode otomatis berformat `PRD-<UUID>`.
+Setiap request membuat produk baru dengan kode berbeda. Kode manual/barcode tetap
+bisa dikirim, tetapi harus unik. `_id` juga dibuat otomatis oleh MongoDB.
+
 ```bash
 curl -X POST http://localhost:5000/api/products \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYTlmMWYyYzQxZGI3NzhjZmZkODgxYyIsImlhdCI6MTc4OTUyOTQyOSwiZXhwIjoxNzg5NjE1ODI5fQ.eFTg3XkgDCoqSDC59LyAYzUIgD73EVoua72yylPyjY8" \
   -d '{
     "nama": "Buku Tulis",
-    "kodeProduk": "PLP002",
     "kategori": "Alat Tulis",
     "hargaBeli": 3000,
     "hargaJual": 4500,
@@ -126,6 +129,8 @@ curl -X DELETE http://localhost:5000/api/products/$PRODUCT_ID \
 
 ## 3. Transaction
 
+Kontrak lengkap, kebutuhan replica set, filter WIB, dan kompatibilitas data lama: [TRANSACTION_API.md](TRANSACTION_API.md).
+
 Catatan role:
 
 - `GET /api/transactions` bisa diakses `pemilik` dan `kasir`
@@ -155,10 +160,10 @@ curl -X POST http://localhost:5000/api/transactions/draft \
 
 ### Create Transaction
 
-Endpoint ini menyimpan transaksi. `hargaSatuan`, `subtotal`, dan `totalHarga` dihitung otomatis dari harga produk di database.
+Endpoint ini menyimpan transaksi dan memotong stok secara atomik. `hargaSatuan`, `subtotal`, dan `totalHarga` dihitung otomatis dari harga produk di database.
 
 ```bash
-curl -X POST http://localhost:5000/api/transactions \
+curl -X POST http://localhost:5000/api/transactions/checkout \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYTlmMWYyYzQxZGI3NzhjZmZkODgxYyIsImlhdCI6MTc4OTUyOTQyOSwiZXhwIjoxNzg5NjE1ODI5fQ.eFTg3XkgDCoqSDC59LyAYzUIgD73EVoua72yylPyjY8" \
   -d '{
@@ -193,22 +198,59 @@ curl -X GET http://localhost:5000/api/transactions/6aaa0956c41db778cffd8820 \
 
 ### Cancel Transaction
 
-Endpoint ini membatalkan transaksi dengan cara menghapus data transaksi dari database.
+Endpoint ini mengubah status menjadi `batal` dan mengembalikan stok secara atomik. Riwayat tetap disimpan; void berulang ditolak (409). Alias baru: `PATCH /api/transactions/:id/void`.
 
 ```bash
 curl -X PATCH http://localhost:5000/api/transactions/6aaa0956c41db778cffd8820/cancel \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYTlmMWYyYzQxZGI3NzhjZmZkODgxYyIsImlhdCI6MTc4OTUyOTQyOSwiZXhwIjoxNzg5NjE1ODI5fQ.eFTg3XkgDCoqSDC59LyAYzUIgD73EVoua72yylPyjY8"
+  -H "Authorization: Bearer $TOKEN"
 ```
 
-## 4. Contoh Alur Test Cepat
+## 4. Reports (Hanya Pemilik)
+
+### Get Summary
+
+```bash
+curl -X GET http://localhost:5000/api/reports/summary \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Get Revenue (Omzet Harian)
+
+```bash
+curl -X GET http://localhost:5000/api/reports/revenue \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### Get Top Products (Produk Terlaris)
+
+```bash
+curl -X GET http://localhost:5000/api/reports/top-products \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## 5. Postman Collection
+
+File Postman Collection v2.1 telah disediakan di root proyek:
+- File: `StockArt_API.postman_collection.json`
+
+### Cara Penggunaan:
+1. Buka aplikasi **Postman**.
+2. Klik tombol **Import**, lalu pilih file `StockArt_API.postman_collection.json`.
+3. Buka request `1. Auth > Login Pemilik` atau `Login Kasir`, lalu klik **Send**.
+4. Token JWT akan otomatis tersimpan ke variabel environment Postman dan siap digunakan untuk seluruh endpoint lainnya.
+5. Jalankan `Create Product (Pemilik Only)` tanpa field `kodeProduk`. Request ini bisa diulang tanpa mengubah body; `_id` hasilnya otomatis disimpan sebagai `product_id` untuk request berikutnya. Import ulang koleksi jika masih menggunakan versi lama dengan kode tetap.
+
+---
+
+## 6. Contoh Alur Test Cepat
 
 1. Jalankan `npm run dev`
-2. Register user role `pemilik`
-3. Login sebagai `pemilik`
-4. Simpan token ke variable `TOKEN`
-5. Create product
-6. Simpan id produk ke variable `PRODUCT_ID`
-7. Test draft transaction
-8. Create transaction
-9. Simpan id transaksi ke variable `TRANSACTION_ID`
-10. Test get all, get by id, dan cancel transaction
+2. Jalankan `node scripts/seed.js` untuk membuat akun pemilik default.
+3. Login sebagai `pemilik` via `/api/auth/login` dan simpan token ke variable `TOKEN`.
+4. Tambah produk (`POST /api/products`) dan simpan ID ke `PRODUCT_ID`.
+5. Login sebagai `kasir` via `/api/auth/login`.
+6. Kasir membuat transaksi checkout (`POST /api/transactions/checkout`).
+7. Pemilik mengecek laporan ringkasan (`GET /api/reports/summary`) dan omzet (`GET /api/reports/revenue`).
+

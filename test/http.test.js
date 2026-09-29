@@ -27,6 +27,7 @@ const http = require('node:http');
 const bcrypt = require('bcryptjs');
 const app = require('../app');
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -109,18 +110,50 @@ test('Setup: server & autentikasi', async () => {
     role: 'pemilik',
   });
 
-  // Daftarkan kasir sementara (register publik selalu jadi kasir)
+  // Login pemilik terlebih dahulu untuk mendapatkan token pemilik
+  tokenPemilik = await login(baseUrl, PEMILIK_TEST_USERNAME, PEMILIK_TEST_PASSWORD);
+
+  // Pemilik mendaftarkan kasir sementara
   const { status: regStatus, body: regBody } = await req(
     baseUrl,
     'POST',
     '/api/auth/register',
-    { body: { nama: 'Kasir Test', username: KASIR_TEST_USERNAME, password: KASIR_TEST_PASSWORD } }
+    {
+      token: tokenPemilik,
+      body: { nama: 'Kasir Test', username: KASIR_TEST_USERNAME, password: KASIR_TEST_PASSWORD },
+    }
   );
   assert.equal(regStatus, 201, `Register kasir gagal: ${JSON.stringify(regBody)}`);
-  tokenKasir = regBody.data.token;
 
-  // Login pemilik
-  tokenPemilik = await login(baseUrl, PEMILIK_TEST_USERNAME, PEMILIK_TEST_PASSWORD);
+  // Login kasir untuk mendapatkan tokenKasir
+  tokenKasir = await login(baseUrl, KASIR_TEST_USERNAME, KASIR_TEST_PASSWORD);
+});
+
+// ─── Profile Tests ───────────────────────────────────────────────────────────
+
+test('GET /api/auth/me — tanpa token ditolak (401)', async () => {
+  const { status } = await req(baseUrl, 'GET', '/api/auth/me');
+  assert.equal(status, 401);
+});
+
+test('GET /api/auth/me — pemilik dapat melihat profil diri (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/auth/me', {
+    token: tokenPemilik,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.username, PEMILIK_TEST_USERNAME);
+  assert.equal(body.data.role, 'pemilik');
+});
+
+test('GET /api/auth/me — kasir dapat melihat profil diri (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/auth/me', {
+    token: tokenKasir,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.username, KASIR_TEST_USERNAME);
+  assert.equal(body.data.role, 'kasir');
 });
 
 // ─── Product Tests ───────────────────────────────────────────────────────────
@@ -297,10 +330,82 @@ test('PATCH /api/transactions/:id/cancel — pemilik BISA cancel transaksi (200)
   assert.equal(body.success, true);
 });
 
-// ─── Validation Tests ────────────────────────────────────────────────────────
+// ─── Report Tests ────────────────────────────────────────────────────────────
+
+test('GET /api/reports/summary — tanpa token ditolak (401)', async () => {
+  const { status } = await req(baseUrl, 'GET', '/api/reports/summary');
+  assert.equal(status, 401);
+});
+
+test('GET /api/reports/summary — kasir TIDAK BISA akses laporan (403)', async () => {
+  const { status } = await req(baseUrl, 'GET', '/api/reports/summary', {
+    token: tokenKasir,
+  });
+  assert.equal(status, 403);
+});
+
+test('GET /api/reports/summary — pemilik BISA akses ringkasan laporan (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/reports/summary', {
+    token: tokenPemilik,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.ok(typeof body.data.totalProduk === 'number');
+  assert.ok(typeof body.data.totalTransaksi === 'number');
+  assert.ok(typeof body.data.totalOmzet === 'number');
+});
+
+test('GET /api/reports/revenue — pemilik BISA akses laporan omzet (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/reports/revenue', {
+    token: tokenPemilik,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.ok(Array.isArray(body.data));
+});
+
+test('GET /api/reports/top-products — pemilik BISA akses laporan top products (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/reports/top-products', {
+    token: tokenPemilik,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.ok(Array.isArray(body.data));
+});
+
+// ─── Register RBAC & Validation Tests ────────────────────────────────────────
+
+test('POST /api/auth/register — tanpa token ditolak (401)', async () => {
+  const { status } = await req(baseUrl, 'POST', '/api/auth/register', {
+    body: { nama: 'Staff Baru', username: 'staff01', password: 'password123' },
+  });
+  assert.equal(status, 401);
+});
+
+test('POST /api/auth/register — kasir TIDAK BISA daftarkan user baru (403)', async () => {
+  const { status } = await req(baseUrl, 'POST', '/api/auth/register', {
+    token: tokenKasir,
+    body: { nama: 'Staff Baru', username: 'staff01', password: 'password123' },
+  });
+  assert.equal(status, 403);
+});
+
+test('POST /api/auth/register — pemilik BISA daftarkan kasir baru (201)', async () => {
+  const newKasirUsername = `kasir_baru_${Date.now()}`;
+  const { status, body } = await req(baseUrl, 'POST', '/api/auth/register', {
+    token: tokenPemilik,
+    body: { nama: 'Kasir Resmi Toko', username: newKasirUsername, password: 'password123' },
+  });
+  assert.equal(status, 201, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.role, 'kasir');
+  // Bersihkan data user yang baru dibuat
+  await User.findByIdAndDelete(body.data._id);
+});
 
 test('POST /api/auth/register — password kurang dari 8 karakter ditolak (400)', async () => {
   const { status, body } = await req(baseUrl, 'POST', '/api/auth/register', {
+    token: tokenPemilik,
     body: { nama: 'Test', username: 'testuser123', password: 'abc' },
   });
   assert.equal(status, 400, JSON.stringify(body));
@@ -311,6 +416,7 @@ test('POST /api/auth/register — password kurang dari 8 karakter ditolak (400)'
 
 test('POST /api/auth/register — username tidak valid (spasi/simbol) ditolak (400)', async () => {
   const { status, body } = await req(baseUrl, 'POST', '/api/auth/register', {
+    token: tokenPemilik,
     body: { nama: 'Test', username: 'user name!', password: 'password123' },
   });
   assert.equal(status, 400, JSON.stringify(body));
@@ -319,6 +425,7 @@ test('POST /api/auth/register — username tidak valid (spasi/simbol) ditolak (4
 
 test('POST /api/auth/register — tanpa field wajib ditolak (400)', async () => {
   const { status, body } = await req(baseUrl, 'POST', '/api/auth/register', {
+    token: tokenPemilik,
     body: {},
   });
   assert.equal(status, 400, JSON.stringify(body));
@@ -333,10 +440,10 @@ test('POST /api/auth/login — tanpa body ditolak (400)', async () => {
   assert.ok(body.errors.length >= 2, 'harus ada error username dan password');
 });
 
-test('POST /api/products — tanpa kodeProduk ditolak (400)', async () => {
+test('POST /api/products — kodeProduk kosong ditolak (400)', async () => {
   const { status, body } = await req(baseUrl, 'POST', '/api/products', {
     token: tokenPemilik,
-    body: { nama: 'Produk Tanpa Kode', hargaBeli: 1000, hargaJual: 2000 },
+    body: { nama: 'Produk Kode Kosong', kodeProduk: '', hargaBeli: 1000, hargaJual: 2000 },
   });
   assert.equal(status, 400, JSON.stringify(body));
   assert.ok(body.errors.some((e) => e.includes('kodeProduk')));
@@ -370,9 +477,87 @@ test('POST /api/transactions — jumlah item 0 ditolak (400)', async () => {
   assert.ok(body.errors.some((e) => e.includes('jumlah')));
 });
 
+// ─── Soft Delete & Restore Tests ─────────────────────────────────────────────
+
+test('DELETE /api/products/:id — kasir TIDAK BISA hapus produk (403)', async () => {
+  const { status } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${createdProductId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(status, 403);
+});
+
+test('DELETE /api/products/:id — pemilik BISA soft delete produk (200)', async () => {
+  // Buat produk sementara untuk diuji soft delete
+  const { body: newProd } = await req(baseUrl, 'POST', '/api/products', {
+    token: tokenPemilik,
+    body: {
+      nama: 'Produk Uji Soft Delete',
+      kodeProduk: `SD-${Date.now()}`,
+      hargaBeli: 2000,
+      hargaJual: 3000,
+      stok: 10,
+    },
+  });
+  const tempId = newProd.data._id;
+
+  // Soft delete produk
+  const { status, body } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${tempId}`,
+    { token: tokenPemilik }
+  );
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.message, 'Produk berhasil dinonaktifkan');
+
+  // Verifikasi produk berstatus aktif: false
+  const { body: detail } = await req(
+    baseUrl,
+    'GET',
+    `/api/products/${tempId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(detail.data.aktif, false);
+
+  // Restore produk kembali aktif
+  const { status: restoreStatus, body: restoreBody } = await req(
+    baseUrl,
+    'PATCH',
+    `/api/products/${tempId}/restore`,
+    { token: tokenPemilik }
+  );
+  assert.equal(restoreStatus, 200, JSON.stringify(restoreBody));
+  assert.equal(restoreBody.success, true);
+  assert.equal(restoreBody.data.aktif, true);
+
+  // Hapus permanen
+  const { status: permStatus } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${tempId}?permanent=true`,
+    { token: tokenPemilik }
+  );
+  assert.equal(permStatus, 200);
+
+  // Verifikasi 404 setelah hapus permanen
+  const { status: notFoundStatus } = await req(
+    baseUrl,
+    'GET',
+    `/api/products/${tempId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(notFoundStatus, 404);
+});
+
 // ─── Teardown ────────────────────────────────────────────────────────────────
 
 test('Teardown: hapus data test & tutup server', async () => {
+  if (createdTransactionId) await Transaction.deleteOne({ _id: createdTransactionId });
+
   // Hapus produk test yang dibuat (cleanup DB)
   if (createdProductId) {
     await req(baseUrl, 'DELETE', `/api/products/${createdProductId}`, {

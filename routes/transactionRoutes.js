@@ -18,9 +18,11 @@ router.get('/:id', protect, getTransactionById);
 
 // Cashier dan owner dapat menghitung draft dan membuat transaksi
 router.post('/draft', protect, authorize('kasir', 'pemilik'), validate(transactionRules), draftTransaction);
+router.post('/checkout', protect, authorize('kasir', 'pemilik'), validate(transactionRules), createTransaction);
 router.post('/', protect, authorize('kasir', 'pemilik'), validate(transactionRules), createTransaction);
 
 // Hanya owner yang dapat membatalkan transaksi
+router.patch('/:id/void', protect, authorize('pemilik'), cancelTransaction);
 router.patch('/:id/cancel', protect, authorize('pemilik'), cancelTransaction);
 
 module.exports = router;

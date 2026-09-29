@@ -1,0 +1,664 @@
+{
+	"info": {
+		"_postman_id": "9b12a867-b50a-4fa4-9d58-stockart001",
+		"name": "StockArt Backend API",
+		"description": "Koleksi Postman resmi untuk StockArt Backend API (Auth, RBAC, Product, Transaction, & Reports).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "1. Auth",
+			"item": [
+				{
+					"name": "Register Kasir Baru (Pemilik Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Kasir Baru\",\n  \"username\": \"kasir01\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Mendaftarkan user kasir baru oleh Pemilik Toko (wajib token pemilik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Login Pemilik",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.token) {",
+									"        pm.environment.set(\"token\", jsonData.token);",
+									"        pm.environment.set(\"token_pemilik\", jsonData.token);",
+									"        console.log(\"Token Pemilik tersimpan ke environment:\", jsonData.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"pemilik\",\n  \"password\": \"gantidulu123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login sebagai akun Pemilik (token otomatis disimpan ke {{token}} dan {{token_pemilik}})."
+					},
+					"response": []
+				},
+				{
+					"name": "Login Kasir",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.token) {",
+									"        pm.environment.set(\"token\", jsonData.token);",
+									"        pm.environment.set(\"token_kasir\", jsonData.token);",
+									"        console.log(\"Token Kasir tersimpan ke environment:\", jsonData.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"kasir01\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Login sebagai akun Kasir (token otomatis disimpan ke {{token}} dan {{token_kasir}})."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile (Me)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Mengambil informasi identitas pengguna yang sedang login berdasarkan token JWT."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Product (Katalog & Stok)",
+			"item": [
+				{
+					"name": "Get All Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Melihat daftar seluruh produk (Dapat diakses oleh Kasir & Pemilik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Product by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products/{{product_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}"
+							]
+						},
+						"description": "Melihat detail spesifik produk berdasarkan ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Create Product (Pemilik Only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data._id) {",
+									"        pm.environment.set(\"product_id\", jsonData.data._id);",
+									"        console.log(\"ID Produk tersimpan:\", jsonData.data._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Buku Tulis Sidu 38 Lembar\",\n  \"kategori\": \"Alat Tulis\",\n  \"hargaBeli\": 3000,\n  \"hargaJual\": 4500,\n  \"stok\": 50,\n  \"satuan\": \"pcs\",\n  \"stokMinimum\": 10,\n  \"deskripsi\": \"Buku tulis bergaris 38 lembar\",\n  \"aktif\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Menambah produk baru ke database (Hanya role Pemilik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Update Product (Pemilik Only)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama\": \"Buku Tulis Sidu 38 Lembar (Updated)\",\n  \"hargaJual\": 5000,\n  \"stok\": 60\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/products/{{product_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}"
+							]
+						},
+						"description": "Memperbarui informasi produk (Hanya role Pemilik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete / Nonaktifkan Product (Pemilik Only)",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products/{{product_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}"
+							]
+						},
+						"description": "Menghapus produk dari katalog toko secara permanen atau soft delete (default: soft delete. Tambahkan query param ?permanent=true jika ingin menghapus fisik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Restore Product (Pemilik Only)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products/{{product_id}}/restore",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}",
+								"restore"
+							]
+						},
+						"description": "Mengaktifkan kembali produk yang telah dinonaktifkan (restore soft delete)."
+					},
+					"response": []
+				},
+				{
+					"name": "Search & Filter Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products?search=indo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "indo",
+									"description": "Cari lewat nama/kode (Regex)"
+								},
+								{
+									"key": "kategori",
+									"value": "sembako",
+									"disabled": true
+								},
+								{
+									"key": "barcode",
+									"value": "12345",
+									"disabled": true,
+									"description": "Cari lewat exact barcode"
+								}
+							]
+						},
+						"description": "Mencari produk berdasarkan nama, kategori, atau barcode spesifik."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Low Stock Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products/low-stock",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"low-stock"
+							]
+						},
+						"description": "Melihat daftar produk yang stoknya menipis (<= stokMinimum)."
+					},
+					"response": []
+				},
+				{
+					"name": "Restock Product (Pemilik Only)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"jumlah\": 20\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/products/{{product_id}}/restock",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}",
+								"restock"
+							]
+						},
+						"description": "Menambah stok produk secara aman dengan operasi $inc (Hanya role Pemilik)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Transaction (Kasir & Penjualan)",
+			"item": [
+				{
+					"name": "Draft Transaction (Kalkulasi Otomatis)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"detailBarang\": [\n    {\n      \"produk\": \"{{product_id}}\",\n      \"jumlah\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/draft",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"draft"
+							]
+						},
+						"description": "Menghitung subtotal dan total belanja tanpa membuat transaksi di database."
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout Transaction (Atomic Stock)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data._id) {",
+									"        pm.environment.set(\"transaction_id\", jsonData.data._id);",
+									"        console.log(\"ID Transaksi tersimpan:\", jsonData.data._id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"detailBarang\": [\n    {\n      \"produk\": \"{{product_id}}\",\n      \"jumlah\": 2\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/transactions/checkout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"checkout"
+							]
+						},
+						"description": "Checkout atomik: hitung harga server, validasi dan potong stok. Kasir dari JWT. HTTP 409 jika stok kurang. POST /api/transactions tetap menjadi alias."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/transactions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions"
+							],
+							"query": [
+								{
+									"key": "tanggal",
+									"value": "2026-09-29",
+									"disabled": true
+								},
+								{
+									"key": "kasir",
+									"value": "{{kasir_id}}",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "selesai",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Filter opsional tanggal (YYYY-MM-DD, WIB), kasir (ObjectId), status (selesai/batal)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/transactions/{{transaction_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"{{transaction_id}}"
+							]
+						},
+						"description": "Melihat rincian detail struk transaksi berdasarkan ID."
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Transaction (Pemilik Only)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/transactions/{{transaction_id}}/void",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"transactions",
+								"{{transaction_id}}",
+								"void"
+							]
+						},
+						"description": "Void transaksi dan kembalikan stok secara atomik tanpa menghapus riwayat (hanya Pemilik). Void ulang: HTTP 409. /cancel tetap menjadi alias."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Reports & Analytics (Pemilik Only)",
+			"item": [
+				{
+					"name": "Get Summary (Total Produk, Transaksi, Omzet)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reports/summary",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"reports",
+								"summary"
+							]
+						},
+						"description": "Mendapatkan ringkasan metrik statistik utama toko (Hanya role Pemilik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Revenue Daily (Laporan Omzet Harian)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reports/revenue",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"reports",
+								"revenue"
+							]
+						},
+						"description": "Laporan pendapatan/omzet yang dikelompokkan per tanggal (Hanya role Pemilik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Top Products (Produk Terlaris)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/reports/top-products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"reports",
+								"top-products"
+							]
+						},
+						"description": "Laporan daftar produk dengan penjualan terbanyak (Hanya role Pemilik)."
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "product_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transaction_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

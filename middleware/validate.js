@@ -64,8 +64,8 @@ const loginRules = (body) => {
 
 /**
  * POST /api/products
- * PUT  /api/products/:id
- * { nama, kodeProduk, hargaBeli, hargaJual, stok?, stokMinimum? }
+ * { nama, kodeProduk?, hargaBeli, hargaJual, stok?, stokMinimum? }
+ * kodeProduk dibuat otomatis jika tidak dikirim.
  */
 const productRules = (body) => {
   const errors = [];
@@ -74,8 +74,8 @@ const productRules = (body) => {
     errors.push('nama produk wajib diisi');
   }
 
-  if (!isNonEmptyString(body.kodeProduk)) {
-    errors.push('kodeProduk wajib diisi');
+  if (body.kodeProduk !== undefined && !isNonEmptyString(body.kodeProduk)) {
+    errors.push('kodeProduk harus berupa teks dan tidak boleh kosong jika dikirim');
   }
 
   if (body.hargaBeli === undefined || body.hargaBeli === null) {
@@ -142,15 +142,36 @@ const transactionRules = (body) => {
   body.detailBarang.forEach((item, index) => {
     const prefix = `detailBarang[${index}]`;
 
-    if (!item.produk) {
-      errors.push(`${prefix}.produk wajib diisi`);
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      errors.push(`${prefix} harus berupa objek`);
+      return;
+    }
+
+    if (typeof item.produk !== 'string' || !/^[a-fA-F0-9]{24}$/.test(item.produk)) {
+      errors.push(`${prefix}.produk harus berupa ObjectId valid`);
     }
 
     const jumlah = Number(item.jumlah);
-    if (!Number.isInteger(jumlah) || jumlah < 1) {
+    if (!['number', 'string'].includes(typeof item.jumlah) || !Number.isSafeInteger(jumlah) || jumlah < 1) {
       errors.push(`${prefix}.jumlah harus berupa bilangan bulat minimal 1`);
     }
   });
+
+  return errors;
+};
+
+/**
+ * PATCH /api/products/:id/restock
+ * { jumlah }
+ */
+const restockRules = (body) => {
+  const errors = [];
+
+  if (body.jumlah === undefined || body.jumlah === null) {
+    errors.push('jumlah wajib diisi');
+  } else if (!isPositiveNumber(Number(body.jumlah)) || Number(body.jumlah) === 0) {
+    errors.push('jumlah harus berupa angka positif dan lebih dari 0');
+  }
 
   return errors;
 };
@@ -185,4 +206,5 @@ module.exports = {
   productRules,
   productUpdateRules,
   transactionRules,
+  restockRules,
 };
