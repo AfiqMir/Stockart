@@ -241,7 +241,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"nama\": \"Buku Tulis Sidu 38 Lembar\",\n  \"kodeProduk\": \"ATK001\",\n  \"kategori\": \"Alat Tulis\",\n  \"hargaBeli\": 3000,\n  \"hargaJual\": 4500,\n  \"stok\": 50,\n  \"satuan\": \"pcs\",\n  \"stokMinimum\": 10,\n  \"deskripsi\": \"Buku tulis bergaris 38 lembar\",\n  \"aktif\": true\n}"
+							"raw": "{\n  \"nama\": \"Buku Tulis Sidu 38 Lembar\",\n  \"kategori\": \"Alat Tulis\",\n  \"hargaBeli\": 3000,\n  \"hargaJual\": 4500,\n  \"stok\": 50,\n  \"satuan\": \"pcs\",\n  \"stokMinimum\": 10,\n  \"deskripsi\": \"Buku tulis bergaris 38 lembar\",\n  \"aktif\": true\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/products",
