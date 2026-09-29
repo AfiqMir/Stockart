@@ -413,10 +413,10 @@ test('POST /api/auth/login — tanpa body ditolak (400)', async () => {
   assert.ok(body.errors.length >= 2, 'harus ada error username dan password');
 });
 
-test('POST /api/products — tanpa kodeProduk ditolak (400)', async () => {
+test('POST /api/products — kodeProduk kosong ditolak (400)', async () => {
   const { status, body } = await req(baseUrl, 'POST', '/api/products', {
     token: tokenPemilik,
-    body: { nama: 'Produk Tanpa Kode', hargaBeli: 1000, hargaJual: 2000 },
+    body: { nama: 'Produk Kode Kosong', kodeProduk: '', hargaBeli: 1000, hargaJual: 2000 },
   });
   assert.equal(status, 400, JSON.stringify(body));
   assert.ok(body.errors.some((e) => e.includes('kodeProduk')));
