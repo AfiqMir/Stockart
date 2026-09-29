@@ -27,6 +27,7 @@ const http = require('node:http');
 const bcrypt = require('bcryptjs');
 const app = require('../app');
 const User = require('../models/User');
+const Transaction = require('../models/Transaction');
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -452,6 +453,8 @@ test('POST /api/transactions — jumlah item 0 ditolak (400)', async () => {
 // ─── Teardown ────────────────────────────────────────────────────────────────
 
 test('Teardown: hapus data test & tutup server', async () => {
+  if (createdTransactionId) await Transaction.deleteOne({ _id: createdTransactionId });
+
   // Hapus produk test yang dibuat (cleanup DB)
   if (createdProductId) {
     await req(baseUrl, 'DELETE', `/api/products/${createdProductId}`, {
