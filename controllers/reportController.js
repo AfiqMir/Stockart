@@ -1,28 +1,71 @@
 const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
 
+const buildDateFilter = (tanggalMulai, tanggalAkhir) => {
+    if (!tanggalMulai && !tanggalAkhir) {
+        return {};
+    }
+
+    const filter = {};
+
+    if (tanggalMulai) {
+        const mulai = new Date(tanggalMulai);
+
+        if (isNaN(mulai.getTime())) {
+            const error = new Error(
+                'Format tanggalMulai tidak valid. Gunakan format YYYY-MM-DD'
+            );
+
+            error.statusCode = 400;
+            throw error;
+        }
+
+        filter.$gte = mulai;
+    }
+
+    if (tanggalAkhir) {
+        const akhir = new Date(tanggalAkhir);
+
+        if (isNaN(akhir.getTime())) {
+            const error = new Error(
+                'Format tanggalAkhir tidak valid. Gunakan format YYYY-MM-DD'
+            );
+
+            error.statusCode = 400;
+            throw error;
+        }
+
+        akhir.setHours(23, 59, 59, 999);
+        filter.$lte = akhir;
+    }
+
+    if (filter.$gte && filter.$lte && filter.$gte > filter.$lte) {
+        const error = new Error(
+            'tanggalMulai tidak boleh lebih besar dari tanggalAkhir'
+        );
+
+        error.statusCode = 400;
+        throw error;
+    }
+
+    return filter;
+};
+
 const getSummary = async (req, res) => {
     try {
         const { tanggalMulai, tanggalAkhir } = req.query;
 
+        const dateFilter = buildDateFilter(
+            tanggalMulai,
+            tanggalAkhir
+        );
+
         const filterTransaksi = {
-            status: 'selesai'
+            status: 'selesai',
+            ...(Object.keys(dateFilter).length > 0 && {
+                createdAt: dateFilter
+            })
         };
-
-        if (tanggalMulai || tanggalAkhir) {
-            filterTransaksi.createdAt = {};
-
-            if (tanggalMulai) {
-                filterTransaksi.createdAt.$gte = new Date(tanggalMulai);
-            }
-
-            if (tanggalAkhir) {
-                const akhir = new Date(tanggalAkhir);
-                akhir.setHours(23, 59, 59, 999);
-
-                filterTransaksi.createdAt.$lte = akhir;
-            }
-        }
 
         const totalProduk = await Product.countDocuments();
 
@@ -59,10 +102,14 @@ const getSummary = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Gagal mengambil ringkasan laporan',
-            error: error.message
+            message:
+                statusCode === 400
+                    ? error.message
+                    : 'Gagal mengambil ringkasan laporan'
         });
     }
 };
@@ -71,24 +118,17 @@ const getRevenue = async (req, res) => {
     try {
         const { tanggalMulai, tanggalAkhir } = req.query;
 
+        const dateFilter = buildDateFilter(
+            tanggalMulai,
+            tanggalAkhir
+        );
+
         const filterTransaksi = {
-            status: 'selesai'
+            status: 'selesai',
+            ...(Object.keys(dateFilter).length > 0 && {
+                createdAt: dateFilter
+            })
         };
-
-        if (tanggalMulai || tanggalAkhir) {
-            filterTransaksi.createdAt = {};
-
-            if (tanggalMulai) {
-                filterTransaksi.createdAt.$gte = new Date(tanggalMulai);
-            }
-
-            if (tanggalAkhir) {
-                const akhir = new Date(tanggalAkhir);
-                akhir.setHours(23, 59, 59, 999);
-
-                filterTransaksi.createdAt.$lte = akhir;
-            }
-        }
 
         const hasil = await Transaction.aggregate([
             {
@@ -129,10 +169,14 @@ const getRevenue = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Gagal mengambil laporan omzet',
-            error: error.message
+            message:
+                statusCode === 400
+                    ? error.message
+                    : 'Gagal mengambil laporan omzet'
         });
     }
 };
@@ -141,24 +185,17 @@ const getTopProducts = async (req, res) => {
     try {
         const { tanggalMulai, tanggalAkhir } = req.query;
 
+        const dateFilter = buildDateFilter(
+            tanggalMulai,
+            tanggalAkhir
+        );
+
         const filterTransaksi = {
-            status: 'selesai'
+            status: 'selesai',
+            ...(Object.keys(dateFilter).length > 0 && {
+                createdAt: dateFilter
+            })
         };
-
-        if (tanggalMulai || tanggalAkhir) {
-            filterTransaksi.createdAt = {};
-
-            if (tanggalMulai) {
-                filterTransaksi.createdAt.$gte = new Date(tanggalMulai);
-            }
-
-            if (tanggalAkhir) {
-                const akhir = new Date(tanggalAkhir);
-                akhir.setHours(23, 59, 59, 999);
-
-                filterTransaksi.createdAt.$lte = akhir;
-            }
-        }
 
         const hasil = await Transaction.aggregate([
             {
@@ -214,10 +251,14 @@ const getTopProducts = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Gagal mengambil produk terlaris',
-            error: error.message
+            message:
+                statusCode === 400
+                    ? error.message
+                    : 'Gagal mengambil produk terlaris'
         });
     }
 };

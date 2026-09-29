@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 
 const { registerUser, loginUser } = require('../controllers/authController');
+const { protect, authorize } = require('../middleware/authMiddleware');
 const { authRateLimiter } = require('../middleware/rateLimiter');
 const { validate, registerRules, loginRules } = require('../middleware/validate');
 
-// Rate limiter diterapkan ke kedua endpoint auth
-router.post('/register', authRateLimiter, validate(registerRules), registerUser);
+// Endpoint register hanya dapat diakses oleh role pemilik (RBAC)
+router.post('/register', protect, authorize('pemilik'), authRateLimiter, validate(registerRules), registerUser);
 router.post('/login', authRateLimiter, validate(loginRules), loginUser);
 
 module.exports = router;

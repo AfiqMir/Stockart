@@ -142,12 +142,17 @@ const transactionRules = (body) => {
   body.detailBarang.forEach((item, index) => {
     const prefix = `detailBarang[${index}]`;
 
-    if (!item.produk) {
-      errors.push(`${prefix}.produk wajib diisi`);
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      errors.push(`${prefix} harus berupa objek`);
+      return;
+    }
+
+    if (typeof item.produk !== 'string' || !/^[a-fA-F0-9]{24}$/.test(item.produk)) {
+      errors.push(`${prefix}.produk harus berupa ObjectId valid`);
     }
 
     const jumlah = Number(item.jumlah);
-    if (!Number.isInteger(jumlah) || jumlah < 1) {
+    if (!['number', 'string'].includes(typeof item.jumlah) || !Number.isSafeInteger(jumlah) || jumlah < 1) {
       errors.push(`${prefix}.jumlah harus berupa bilangan bulat minimal 1`);
     }
   });
