@@ -428,7 +428,7 @@
 					"response": []
 				},
 				{
-					"name": "Create Transaction (Checkout)",
+					"name": "Checkout Transaction (Atomic Stock)",
 					"event": [
 						{
 							"listen": "test",
@@ -459,16 +459,17 @@
 							"raw": "{\n  \"detailBarang\": [\n    {\n      \"produk\": \"{{product_id}}\",\n      \"jumlah\": 2\n    }\n  ]\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/api/transactions",
+							"raw": "{{base_url}}/api/transactions/checkout",
 							"host": [
 								"{{base_url}}"
 							],
 							"path": [
 								"api",
-								"transactions"
+								"transactions",
+								"checkout"
 							]
 						},
-						"description": "Menyimpan transaksi baru (Dapat dilakukan oleh Kasir & Pemilik)."
+						"description": "Checkout atomik: hitung harga server, validasi dan potong stok. Kasir dari JWT. HTTP 409 jika stok kurang. POST /api/transactions tetap menjadi alias."
 					},
 					"response": []
 				},
@@ -485,9 +486,26 @@
 							"path": [
 								"api",
 								"transactions"
+							],
+							"query": [
+								{
+									"key": "tanggal",
+									"value": "2026-09-29",
+									"disabled": true
+								},
+								{
+									"key": "kasir",
+									"value": "{{kasir_id}}",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "selesai",
+									"disabled": true
+								}
 							]
 						},
-						"description": "Melihat seluruh riwayat transaksi."
+						"description": "Filter opsional tanggal (YYYY-MM-DD, WIB), kasir (ObjectId), status (selesai/batal)."
 					},
 					"response": []
 				},
@@ -517,7 +535,7 @@
 						"method": "PATCH",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/transactions/{{transaction_id}}/cancel",
+							"raw": "{{base_url}}/api/transactions/{{transaction_id}}/void",
 							"host": [
 								"{{base_url}}"
 							],
@@ -525,10 +543,10 @@
 								"api",
 								"transactions",
 								"{{transaction_id}}",
-								"cancel"
+								"void"
 							]
 						},
-						"description": "Membatalkan/menghapus transaksi (Hanya role Pemilik)."
+						"description": "Void transaksi dan kembalikan stok secara atomik tanpa menghapus riwayat (hanya Pemilik). Void ulang: HTTP 409. /cancel tetap menjadi alias."
 					},
 					"response": []
 				}

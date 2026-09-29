@@ -126,6 +126,8 @@ curl -X DELETE http://localhost:5000/api/products/$PRODUCT_ID \
 
 ## 3. Transaction
 
+Kontrak lengkap, kebutuhan replica set, filter WIB, dan kompatibilitas data lama: [TRANSACTION_API.md](TRANSACTION_API.md).
+
 Catatan role:
 
 - `GET /api/transactions` bisa diakses `pemilik` dan `kasir`
@@ -155,10 +157,10 @@ curl -X POST http://localhost:5000/api/transactions/draft \
 
 ### Create Transaction
 
-Endpoint ini menyimpan transaksi. `hargaSatuan`, `subtotal`, dan `totalHarga` dihitung otomatis dari harga produk di database.
+Endpoint ini menyimpan transaksi dan memotong stok secara atomik. `hargaSatuan`, `subtotal`, dan `totalHarga` dihitung otomatis dari harga produk di database.
 
 ```bash
-curl -X POST http://localhost:5000/api/transactions \
+curl -X POST http://localhost:5000/api/transactions/checkout \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYTlmMWYyYzQxZGI3NzhjZmZkODgxYyIsImlhdCI6MTc4OTUyOTQyOSwiZXhwIjoxNzg5NjE1ODI5fQ.eFTg3XkgDCoqSDC59LyAYzUIgD73EVoua72yylPyjY8" \
   -d '{
@@ -193,7 +195,7 @@ curl -X GET http://localhost:5000/api/transactions/6aaa0956c41db778cffd8820 \
 
 ### Cancel Transaction
 
-Endpoint ini membatalkan transaksi dengan cara menghapus data transaksi dari database.
+Endpoint ini mengubah status menjadi `batal` dan mengembalikan stok secara atomik. Riwayat tetap disimpan; void berulang ditolak (409). Alias baru: `PATCH /api/transactions/:id/void`.
 
 ```bash
 curl -X PATCH http://localhost:5000/api/transactions/6aaa0956c41db778cffd8820/cancel \
@@ -245,6 +247,6 @@ File Postman Collection v2.1 telah disediakan di root proyek:
 3. Login sebagai `pemilik` via `/api/auth/login` dan simpan token ke variable `TOKEN`.
 4. Tambah produk (`POST /api/products`) dan simpan ID ke `PRODUCT_ID`.
 5. Login sebagai `kasir` via `/api/auth/login`.
-6. Kasir membuat transaksi checkout (`POST /api/transactions`).
+6. Kasir membuat transaksi checkout (`POST /api/transactions/checkout`).
 7. Pemilik mengecek laporan ringkasan (`GET /api/reports/summary`) dan omzet (`GET /api/reports/revenue`).
 

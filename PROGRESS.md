@@ -20,8 +20,8 @@ Commit basis terbaru: `1c16952` (`origin/main`)
 | Bgs | Restock, low-stock, pencarian, dan filter | Dalam Pengerjaan | Menunggu filter query pencarian dan stok menipis. |
 | Ocha | Transaction schema | Selesai | Schema transaksi sudah tersedia. |
 | Ocha | Draft transaksi dan kalkulasi subtotal | Selesai | Validasi produk, jumlah, dan kalkulasi total sudah tersedia. |
-| Ocha | Checkout dengan pemotongan stok | Dalam Pengerjaan | Memerlukan implementasi pengurangan stok atomik saat checkout. |
-| Ocha | Riwayat, void, dan pengembalian stok | Dalam Pengerjaan | GET transaksi dan cancel tersedia; cancel perlu mengembalikan stok otomatis. |
+| Ocha | Checkout dengan pemotongan stok | Implementasi selesai | Checkout atomik, validasi stok/produk aktif, rollback, dan snapshot harga. |
+| Ocha | Riwayat, void, dan pengembalian stok | Implementasi selesai | Filter tanggal WIB/kasir/status; void atomik mempertahankan riwayat dan audit. |
 | Izzy | Report dan aggregation | Selesai (Endpoint Terintegrasi) | Endpoint `/api/reports/summary`, `/api/reports/revenue`, dan `/api/reports/top-products` sudah selesai dan teruji. |
 
 ## Perubahan Afiq
@@ -67,8 +67,24 @@ GitHub Actions workflow: .github/workflows/ci.yml
 ## Langkah Berikutnya
 
 1. Bgs menyelesaikan restock, low-stock, pencarian, filter, dan pencegahan stok negatif.
-2. Ocha mengimplementasikan checkout atomik: validasi stok, pengurangan stok, dan rollback saat gagal.
-3. Ocha menambahkan filter riwayat transaksi serta pengembalian stok saat void/cancel.
+2. Tim Afiq/Bgs/Ocha menjalankan penerimaan bersama menggunakan skenario di `TRANSACTION_API.md`.
+3. Frontend mengintegrasikan kontrak transaksi dan menjalankan UAT sebelum code freeze.
 4. Izzy menambahkan fitur ekspor PDF dan pengiriman email laporan otomatis (G6 No. 2).
 5. Deploy Frontend ke Cloudflare Pages dan hubungkan ke backend Railway.
 6. Konfigurasi custom domain (DomaiNesia) ke frontend dan backend.
+
+
+## Pembaruan Ocha — 2026-09-29
+
+- Memperketat validasi ObjectId, jumlah bulat aman, produk aktif, dan stok draf.
+- Menggabungkan produk duplikat dan menyimpan snapshot nama/kode/harga pada struk.
+- Menambahkan `/api/transactions/checkout` dengan transaksi MongoDB dan rollback;
+  endpoint POST lama tetap menjadi alias.
+- Menambahkan filter tanggal WIB, kasir, dan status pada riwayat transaksi.
+- Void mempertahankan riwayat, mencatat pelaku/waktu, dan mengembalikan stok sekali.
+  Transaksi lama tanpa pemotongan stok tidak menambah stok saat dibatalkan.
+- Memperbarui dokumentasi kontrak frontend dan koleksi Postman.
+- Validasi lokal: **48 tests passed, 0 failed**, memakai MongoDB replica set terpisah;
+  mencakup rollback, checkout/void bersamaan, login kasir, RBAC, laporan, dan filter WIB.
+- `git diff --check` bersih. UAT bersama Afiq/Bgs, penerimaan frontend, dan keputusan
+  code freeze belum dilakukan; bukan bagian yang dapat dinyatakan selesai secara otomatis.
