@@ -129,6 +129,33 @@ test('Setup: server & autentikasi', async () => {
   tokenKasir = await login(baseUrl, KASIR_TEST_USERNAME, KASIR_TEST_PASSWORD);
 });
 
+// ─── Profile Tests ───────────────────────────────────────────────────────────
+
+test('GET /api/auth/me — tanpa token ditolak (401)', async () => {
+  const { status } = await req(baseUrl, 'GET', '/api/auth/me');
+  assert.equal(status, 401);
+});
+
+test('GET /api/auth/me — pemilik dapat melihat profil diri (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/auth/me', {
+    token: tokenPemilik,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.username, PEMILIK_TEST_USERNAME);
+  assert.equal(body.data.role, 'pemilik');
+});
+
+test('GET /api/auth/me — kasir dapat melihat profil diri (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/auth/me', {
+    token: tokenKasir,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.username, KASIR_TEST_USERNAME);
+  assert.equal(body.data.role, 'kasir');
+});
+
 // ─── Product Tests ───────────────────────────────────────────────────────────
 
 test('GET /api/products — kasir dapat melihat daftar produk', async () => {
