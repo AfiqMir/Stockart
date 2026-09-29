@@ -81,7 +81,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"username\": \"pemilik\",\n  \"password\": \"pemilik123\"\n}"
+							"raw": "{\n  \"username\": \"pemilik\",\n  \"password\": \"gantidulu123\"\n}"
 						},
 						"url": {
 							"raw": "{{base_url}}/api/auth/login",
@@ -287,7 +287,7 @@
 					"response": []
 				},
 				{
-					"name": "Delete Product (Pemilik Only)",
+					"name": "Delete / Nonaktifkan Product (Pemilik Only)",
 					"request": {
 						"method": "DELETE",
 						"header": [],
@@ -302,7 +302,28 @@
 								"{{product_id}}"
 							]
 						},
-						"description": "Menghapus produk dari katalog (Hanya role Pemilik)."
+						"description": "Menghapus produk dari katalog toko secara permanen atau soft delete (default: soft delete. Tambahkan query param ?permanent=true jika ingin menghapus fisik)."
+					},
+					"response": []
+				},
+				{
+					"name": "Restore Product (Pemilik Only)",
+					"request": {
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products/{{product_id}}/restore",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"{{product_id}}",
+								"restore"
+							]
+						},
+						"description": "Mengaktifkan kembali produk yang telah dinonaktifkan (restore soft delete)."
 					},
 					"response": []
 				},

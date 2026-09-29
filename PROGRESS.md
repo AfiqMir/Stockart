@@ -42,7 +42,38 @@ Commit basis terbaru: `1c16952` (`origin/main`)
 - **Deploy Staging Production:** Backend live 24/7 di **Railway Cloud** (`https://stockart-backend-production.up.railway.app`) dan terhubung ke **MongoDB Atlas**.
 - Menyiapkan `render.yaml`, GitHub Actions CI, dan konfigurasi `CORS_ORIGIN`.
 
-## Validasi Terakhir
+## Perubahan Bgs (Stock & Catalog)
+
+- **Schema Produk:** Menyusun schema produk mencakup `nama`, `kodeProduk` (unique), `kategori`, `hargaBeli`, `hargaJual`, `stok`, `satuan`, `stokMinimum`, `deskripsi`, dan `aktif` di `models/Product.js`.
+- **CRUD Produk:** Endpoint `GET /api/products`, `GET /api/products/:id`, `POST /api/products`, `PUT /api/products/:id`, dan `DELETE /api/products/:id`. Akses mutasi dibatasi khusus role `pemilik`.
+- **Soft Delete (Nonaktifkan Produk):** Endpoint `DELETE /api/products/:id` secara default melakukan soft delete dengan mengubah status menjadi `aktif: false` (respon: `"Produk berhasil dinonaktifkan"`), sehingga menjaga integritas riwayat transaksi masa lalu.
+- **Opsi Hapus Permanen:** Menambahkan opsi penghapusan fisik dari MongoDB jika menyertakan query parameter `?permanent=true` (respon: `"Produk berhasil dihapus"`).
+- **Fitur Restore Produk:** Menambahkan endpoint `PATCH /api/products/:id/restore` khusus pemilik untuk mengaktifkan kembali produk yang telah dinonaktifkan (`aktif: true`).
+- **Filter Katalog Aktif:** `GET /api/products` secara default hanya menampilkan produk aktif di katalog toko, serta mendukung query parameter `?aktif=all` (semua status) dan `?aktif=false` (hanya produk dinonaktifkan). Endpoint `GET /api/products/low-stock` juga difilter hanya untuk produk aktif.
+- **Pencarian & Barcode:** Menambahkan pencarian fleksibel berbasis nama/kode produk (`search`), kategori (`kategori`), dan exact match untuk alat barcode scanner (`barcode`) pada endpoint `GET /api/products`.
+- **Peringatan Stok Menipis:** Menambahkan endpoint `GET /api/products/low-stock` menggunakan ekspresi query `$expr: { $lte: ['$stok', '$stokMinimum'] }` dengan urutan stok terendah.
+- **Fungsi Restock:** Menambahkan endpoint `PATCH /api/products/:id/restock` dengan operator `$inc` dan validasi jumlah bilangan positif minimal 1.
+- **Validasi & Integritas Stok:** Menambahkan validasi `productRules`, `productUpdateRules`, dan `restockRules` di `middleware/validate.js` serta constraint schema `min: [0]` guna mencegah stok bernilai negatif.
+- **Katalog Seeding:** Menambahkan `scripts/seedProducts.js` berisi 30+ sampel produk toko kelontong (Sembako, Minuman, Cemilan, Kebersihan & Perawatan Diri, Alat Tulis) lengkap dengan sampel produk stok menipis untuk demo.
+
+## Pembaruan Ocha (Transaction)
+
+- Memperketat validasi ObjectId, jumlah bulat aman, produk aktif, dan stok draf.
+- Menggabungkan produk duplikat dan menyimpan snapshot nama/kode/harga pada struk.
+- Menambahkan `/api/transactions/checkout` dengan transaksi MongoDB dan rollback; endpoint `POST /api/transactions` tetap menjadi alias.
+- Menambahkan filter tanggal WIB, kasir, dan status pada riwayat transaksi (`GET /api/transactions`).
+- Void mempertahankan riwayat, mencatat pelaku/waktu, dan mengembalikan stok sekali via `PATCH /api/transactions/:id/void`. Transaksi lama tanpa pemotongan stok tidak menambah stok saat dibatalkan.
+- Memperbarui dokumentasi kontrak frontend di `TRANSACTION_API.md` dan koleksi Postman.
+- Menambahkan test suite `test/transaction.test.js` mencakup rollback, checkout/void bersamaan, validasi stok, dan filter tanggal WIB.
+
+## Perubahan Izzy (Report)
+
+- Menambahkan endpoint statistik ringkas `GET /api/reports/summary` (total produk, total transaksi selesai, total omzet) dengan filter rentang tanggal.
+- Menambahkan query agregasi omzet harian `GET /api/reports/revenue` (`$dateToString: '%Y-%m-%d'`) untuk visualisasi grafik tren penjualan.
+- Menambahkan query produk terlaris `GET /api/reports/top-products` (`$unwind`, `$group`, `$sort: { totalTerjual: -1 }`, `$limit: 5`) dengan nama produk, kuantitas terjual, dan total omzet per produk.
+- Mengamankan seluruh rute laporan dengan RBAC khusus role `pemilik` di `routes/reportRoutes.js`.
+
+## Validasi & Test Suite
 
 ```text
 npm test
@@ -58,10 +89,10 @@ Akun pemilik "pemilik" terverifikasi di database MongoDB Atlas
 
 node --check index.js
 node --check app.js
-node --check controllers/authController.js
-node --check middleware/authMiddleware.js
+node --check controllers/productController.js
+node --check controllers/transactionController.js
+node --check controllers/reportController.js
 git diff --check
-GitHub Actions workflow: .github/workflows/ci.yml
 ```
 
 ## Langkah Berikutnya
