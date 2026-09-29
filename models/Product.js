@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { randomUUID } = require('node:crypto');
 
 const productSchema = new mongoose.Schema(
     {
@@ -9,6 +10,7 @@ const productSchema = new mongoose.Schema(
         },
         kodeProduk: {
             type: String,
+            default: () => `PRD-${randomUUID().toUpperCase()}`,
             required: [true, 'Kode produk harus diisi'],
             unique: true,
             trim: true,
