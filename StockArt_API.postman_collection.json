@@ -164,7 +164,7 @@
 								"me"
 							]
 						},
-						"description": "Mendapatkan profil user yang sedang login dari token JWT."
+						"description": "Mengambil informasi identitas pengguna yang sedang login berdasarkan token JWT."
 					},
 					"response": []
 				}
