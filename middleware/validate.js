@@ -64,8 +64,8 @@ const loginRules = (body) => {
 
 /**
  * POST /api/products
- * PUT  /api/products/:id
- * { nama, kodeProduk, hargaBeli, hargaJual, stok?, stokMinimum? }
+ * { nama, kodeProduk?, hargaBeli, hargaJual, stok?, stokMinimum? }
+ * kodeProduk dibuat otomatis jika tidak dikirim.
  */
 const productRules = (body) => {
   const errors = [];
@@ -74,8 +74,8 @@ const productRules = (body) => {
     errors.push('nama produk wajib diisi');
   }
 
-  if (!isNonEmptyString(body.kodeProduk)) {
-    errors.push('kodeProduk wajib diisi');
+  if (body.kodeProduk !== undefined && !isNonEmptyString(body.kodeProduk)) {
+    errors.push('kodeProduk harus berupa teks dan tidak boleh kosong jika dikirim');
   }
 
   if (body.hargaBeli === undefined || body.hargaBeli === null) {
