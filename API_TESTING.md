@@ -66,13 +66,16 @@ Catatan role:
 
 ### Create Product
 
+Jangan kirim `kodeProduk` untuk menggunakan kode otomatis berformat `PRD-<UUID>`.
+Setiap request membuat produk baru dengan kode berbeda. Kode manual/barcode tetap
+bisa dikirim, tetapi harus unik. `_id` juga dibuat otomatis oleh MongoDB.
+
 ```bash
 curl -X POST http://localhost:5000/api/products \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhYTlmMWYyYzQxZGI3NzhjZmZkODgxYyIsImlhdCI6MTc4OTUyOTQyOSwiZXhwIjoxNzg5NjE1ODI5fQ.eFTg3XkgDCoqSDC59LyAYzUIgD73EVoua72yylPyjY8" \
   -d '{
     "nama": "Buku Tulis",
-    "kodeProduk": "PLP002",
     "kategori": "Alat Tulis",
     "hargaBeli": 3000,
     "hargaJual": 4500,
@@ -237,6 +240,7 @@ File Postman Collection v2.1 telah disediakan di root proyek:
 2. Klik tombol **Import**, lalu pilih file `StockArt_API.postman_collection.json`.
 3. Buka request `1. Auth > Login Pemilik` atau `Login Kasir`, lalu klik **Send**.
 4. Token JWT akan otomatis tersimpan ke variabel environment Postman dan siap digunakan untuk seluruh endpoint lainnya.
+5. Jalankan `Create Product (Pemilik Only)` tanpa field `kodeProduk`. Request ini bisa diulang tanpa mengubah body; `_id` hasilnya otomatis disimpan sebagai `product_id` untuk request berikutnya. Import ulang koleksi jika masih menggunakan versi lama dengan kode tetap.
 
 ---
 
