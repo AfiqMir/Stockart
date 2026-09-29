@@ -1,28 +1,59 @@
 const Transaction = require('../models/Transaction');
 const Product = require('../models/Product');
 
+const buildDateFilter = (tanggalMulai, tanggalAkhir) => {
+    if (!tanggalMulai && !tanggalAkhir) {
+        return {};
+    }
+
+    const filter = {};
+
+    if (tanggalMulai) {
+        const mulai = new Date(tanggalMulai);
+
+        if (isNaN(mulai.getTime())) {
+            throw new Error('Format tanggalMulai tidak valid');
+        }
+
+        filter.$gte = mulai;
+    }
+
+    if (tanggalAkhir) {
+        const akhir = new Date(tanggalAkhir);
+
+        if (isNaN(akhir.getTime())) {
+            throw new Error('Format tanggalAkhir tidak valid');
+        }
+
+        akhir.setHours(23, 59, 59, 999);
+
+        filter.$lte = akhir;
+    }
+
+    if (filter.$gte && filter.$lte && filter.$gte > filter.$lte) {
+        throw new Error(
+            'tanggalMulai tidak boleh lebih besar dari tanggalAkhir'
+        );
+    }
+
+    return filter;
+};
+
 const getSummary = async (req, res) => {
     try {
         const { tanggalMulai, tanggalAkhir } = req.query;
 
+        const dateFilter = buildDateFilter(
+            tanggalMulai,
+            tanggalAkhir
+        );
+
         const filterTransaksi = {
-            status: 'selesai'
+            status: 'selesai',
+            ...(Object.keys(dateFilter).length > 0 && {
+                createdAt: dateFilter
+            })
         };
-
-        if (tanggalMulai || tanggalAkhir) {
-            filterTransaksi.createdAt = {};
-
-            if (tanggalMulai) {
-                filterTransaksi.createdAt.$gte = new Date(tanggalMulai);
-            }
-
-            if (tanggalAkhir) {
-                const akhir = new Date(tanggalAkhir);
-                akhir.setHours(23, 59, 59, 999);
-
-                filterTransaksi.createdAt.$lte = akhir;
-            }
-        }
 
         const totalProduk = await Product.countDocuments();
 
@@ -71,24 +102,17 @@ const getRevenue = async (req, res) => {
     try {
         const { tanggalMulai, tanggalAkhir } = req.query;
 
+        const dateFilter = buildDateFilter(
+            tanggalMulai,
+            tanggalAkhir
+        );
+
         const filterTransaksi = {
-            status: 'selesai'
+            status: 'selesai',
+            ...(Object.keys(dateFilter).length > 0 && {
+                createdAt: dateFilter
+            })
         };
-
-        if (tanggalMulai || tanggalAkhir) {
-            filterTransaksi.createdAt = {};
-
-            if (tanggalMulai) {
-                filterTransaksi.createdAt.$gte = new Date(tanggalMulai);
-            }
-
-            if (tanggalAkhir) {
-                const akhir = new Date(tanggalAkhir);
-                akhir.setHours(23, 59, 59, 999);
-
-                filterTransaksi.createdAt.$lte = akhir;
-            }
-        }
 
         const hasil = await Transaction.aggregate([
             {
@@ -141,24 +165,17 @@ const getTopProducts = async (req, res) => {
     try {
         const { tanggalMulai, tanggalAkhir } = req.query;
 
+        const dateFilter = buildDateFilter(
+            tanggalMulai,
+            tanggalAkhir
+        );
+
         const filterTransaksi = {
-            status: 'selesai'
+            status: 'selesai',
+            ...(Object.keys(dateFilter).length > 0 && {
+                createdAt: dateFilter
+            })
         };
-
-        if (tanggalMulai || tanggalAkhir) {
-            filterTransaksi.createdAt = {};
-
-            if (tanggalMulai) {
-                filterTransaksi.createdAt.$gte = new Date(tanggalMulai);
-            }
-
-            if (tanggalAkhir) {
-                const akhir = new Date(tanggalAkhir);
-                akhir.setHours(23, 59, 59, 999);
-
-                filterTransaksi.createdAt.$lte = akhir;
-            }
-        }
 
         const hasil = await Transaction.aggregate([
             {
@@ -221,6 +238,7 @@ const getTopProducts = async (req, res) => {
         });
     }
 };
+
 
 module.exports = {
     getSummary,
