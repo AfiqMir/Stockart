@@ -12,7 +12,12 @@ const buildDateFilter = (tanggalMulai, tanggalAkhir) => {
         const mulai = new Date(tanggalMulai);
 
         if (isNaN(mulai.getTime())) {
-            throw new Error('Format tanggalMulai tidak valid');
+            const error = new Error(
+                'Format tanggalMulai tidak valid. Gunakan format YYYY-MM-DD'
+            );
+
+            error.statusCode = 400;
+            throw error;
         }
 
         filter.$gte = mulai;
@@ -22,18 +27,25 @@ const buildDateFilter = (tanggalMulai, tanggalAkhir) => {
         const akhir = new Date(tanggalAkhir);
 
         if (isNaN(akhir.getTime())) {
-            throw new Error('Format tanggalAkhir tidak valid');
+            const error = new Error(
+                'Format tanggalAkhir tidak valid. Gunakan format YYYY-MM-DD'
+            );
+
+            error.statusCode = 400;
+            throw error;
         }
 
         akhir.setHours(23, 59, 59, 999);
-
         filter.$lte = akhir;
     }
 
     if (filter.$gte && filter.$lte && filter.$gte > filter.$lte) {
-        throw new Error(
+        const error = new Error(
             'tanggalMulai tidak boleh lebih besar dari tanggalAkhir'
         );
+
+        error.statusCode = 400;
+        throw error;
     }
 
     return filter;
@@ -90,10 +102,14 @@ const getSummary = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Gagal mengambil ringkasan laporan',
-            error: error.message
+            message:
+                statusCode === 400
+                    ? error.message
+                    : 'Gagal mengambil ringkasan laporan'
         });
     }
 };
@@ -153,10 +169,14 @@ const getRevenue = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Gagal mengambil laporan omzet',
-            error: error.message
+            message:
+                statusCode === 400
+                    ? error.message
+                    : 'Gagal mengambil laporan omzet'
         });
     }
 };
@@ -231,14 +251,17 @@ const getTopProducts = async (req, res) => {
         });
 
     } catch (error) {
-        res.status(500).json({
+        const statusCode = error.statusCode || 500;
+
+        res.status(statusCode).json({
             success: false,
-            message: 'Gagal mengambil produk terlaris',
-            error: error.message
+            message:
+                statusCode === 400
+                    ? error.message
+                    : 'Gagal mengambil produk terlaris'
         });
     }
 };
-
 
 module.exports = {
     getSummary,
