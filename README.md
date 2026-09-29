@@ -11,6 +11,18 @@
 [![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)]()
 
 ---
+1. Tautan Laporan PDF (Google Drive):
+https://drive.google.com/drive/folders/1q-CFouyNM72jy04lbFyb3o5WhMakrGxF?usp=sharing
+
+2. Tautan Repositori GitHub:
+https://github.com/AfiqMir/stockart-backend
+
+3. Tautan Live Server Deployment (Railway):
+https://stockart-backend-production.up.railway.app
+
+4. Tautan Documenter Postman
+https://documenter.getpostman.com/view/42234832/2sBYB4M79y
+---
 
 ## 1. Deskripsi Aplikasi
 
