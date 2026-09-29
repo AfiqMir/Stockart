@@ -413,6 +413,82 @@ test('POST /api/transactions — jumlah item 0 ditolak (400)', async () => {
   assert.ok(body.errors.some((e) => e.includes('jumlah')));
 });
 
+// ─── Soft Delete & Restore Tests ─────────────────────────────────────────────
+
+test('DELETE /api/products/:id — kasir TIDAK BISA hapus produk (403)', async () => {
+  const { status } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${createdProductId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(status, 403);
+});
+
+test('DELETE /api/products/:id — pemilik BISA soft delete produk (200)', async () => {
+  // Buat produk sementara untuk diuji soft delete
+  const { body: newProd } = await req(baseUrl, 'POST', '/api/products', {
+    token: tokenPemilik,
+    body: {
+      nama: 'Produk Uji Soft Delete',
+      kodeProduk: `SD-${Date.now()}`,
+      hargaBeli: 2000,
+      hargaJual: 3000,
+      stok: 10,
+    },
+  });
+  const tempId = newProd.data._id;
+
+  // Soft delete produk
+  const { status, body } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${tempId}`,
+    { token: tokenPemilik }
+  );
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.message, 'Produk berhasil dinonaktifkan');
+
+  // Verifikasi produk berstatus aktif: false
+  const { body: detail } = await req(
+    baseUrl,
+    'GET',
+    `/api/products/${tempId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(detail.data.aktif, false);
+
+  // Restore produk kembali aktif
+  const { status: restoreStatus, body: restoreBody } = await req(
+    baseUrl,
+    'PATCH',
+    `/api/products/${tempId}/restore`,
+    { token: tokenPemilik }
+  );
+  assert.equal(restoreStatus, 200, JSON.stringify(restoreBody));
+  assert.equal(restoreBody.success, true);
+  assert.equal(restoreBody.data.aktif, true);
+
+  // Hapus permanen
+  const { status: permStatus } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${tempId}?permanent=true`,
+    { token: tokenPemilik }
+  );
+  assert.equal(permStatus, 200);
+
+  // Verifikasi 404 setelah hapus permanen
+  const { status: notFoundStatus } = await req(
+    baseUrl,
+    'GET',
+    `/api/products/${tempId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(notFoundStatus, 404);
+});
+
 // ─── Teardown ────────────────────────────────────────────────────────────────
 
 test('Teardown: hapus data test & tutup server', async () => {
