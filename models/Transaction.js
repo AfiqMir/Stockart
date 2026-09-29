@@ -7,10 +7,13 @@ const transactionItemSchema = new mongoose.Schema(
             ref: 'Product',
             required: [true, 'Produk harus diisi'],
         },
+        namaProduk: String,
+        kodeProduk: String,
         jumlah: {
             type: Number,
             required: [true, 'Jumlah produk harus diisi'],
             min: [1, 'Jumlah produk minimal 1'],
+            validate: Number.isSafeInteger,
         },
         hargaSatuan: {
             type: Number,
@@ -50,6 +53,10 @@ const transactionSchema = new mongoose.Schema(
             required: [true, 'Total harga harus diisi'],
             min: [0, 'Total harga tidak boleh kurang dari 0'],
         },
+        // False for historical transactions created before stock deduction existed.
+        stokDipotong: { type: Boolean, default: false },
+        dibatalkanPada: Date,
+        dibatalkanOleh: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         status: {
             type: String,
             enum: ['selesai', 'batal'],
@@ -60,5 +67,8 @@ const transactionSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+transactionSchema.index({ createdAt: -1 });
+transactionSchema.index({ kasir: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
