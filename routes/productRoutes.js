@@ -9,6 +9,7 @@ const {
   updateProduct,
   deleteProduct,
   restockProduct,
+  restoreProduct,
 } = require('../controllers/productController');
 
 const { protect, authorize } = require('../middleware/authMiddleware');
@@ -23,6 +24,7 @@ router.get('/:id', protect, getProductById);
 router.post('/', protect, authorize('pemilik'), validate(productRules), createProduct);
 router.put('/:id', protect, authorize('pemilik'), validate(productUpdateRules), updateProduct);
 router.patch('/:id/restock', protect, authorize('pemilik'), validate(restockRules), restockProduct);
+router.patch('/:id/restore', protect, authorize('pemilik'), restoreProduct);
 router.delete('/:id', protect, authorize('pemilik'), deleteProduct);
 
 module.exports = router;

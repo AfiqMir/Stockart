@@ -129,6 +129,33 @@ test('Setup: server & autentikasi', async () => {
   tokenKasir = await login(baseUrl, KASIR_TEST_USERNAME, KASIR_TEST_PASSWORD);
 });
 
+// ─── Profile Tests ───────────────────────────────────────────────────────────
+
+test('GET /api/auth/me — tanpa token ditolak (401)', async () => {
+  const { status } = await req(baseUrl, 'GET', '/api/auth/me');
+  assert.equal(status, 401);
+});
+
+test('GET /api/auth/me — pemilik dapat melihat profil diri (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/auth/me', {
+    token: tokenPemilik,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.username, PEMILIK_TEST_USERNAME);
+  assert.equal(body.data.role, 'pemilik');
+});
+
+test('GET /api/auth/me — kasir dapat melihat profil diri (200)', async () => {
+  const { status, body } = await req(baseUrl, 'GET', '/api/auth/me', {
+    token: tokenKasir,
+  });
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.data.username, KASIR_TEST_USERNAME);
+  assert.equal(body.data.role, 'kasir');
+});
+
 // ─── Product Tests ───────────────────────────────────────────────────────────
 
 test('GET /api/products — kasir dapat melihat daftar produk', async () => {
@@ -448,6 +475,82 @@ test('POST /api/transactions — jumlah item 0 ditolak (400)', async () => {
   });
   assert.equal(status, 400, JSON.stringify(body));
   assert.ok(body.errors.some((e) => e.includes('jumlah')));
+});
+
+// ─── Soft Delete & Restore Tests ─────────────────────────────────────────────
+
+test('DELETE /api/products/:id — kasir TIDAK BISA hapus produk (403)', async () => {
+  const { status } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${createdProductId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(status, 403);
+});
+
+test('DELETE /api/products/:id — pemilik BISA soft delete produk (200)', async () => {
+  // Buat produk sementara untuk diuji soft delete
+  const { body: newProd } = await req(baseUrl, 'POST', '/api/products', {
+    token: tokenPemilik,
+    body: {
+      nama: 'Produk Uji Soft Delete',
+      kodeProduk: `SD-${Date.now()}`,
+      hargaBeli: 2000,
+      hargaJual: 3000,
+      stok: 10,
+    },
+  });
+  const tempId = newProd.data._id;
+
+  // Soft delete produk
+  const { status, body } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${tempId}`,
+    { token: tokenPemilik }
+  );
+  assert.equal(status, 200, JSON.stringify(body));
+  assert.equal(body.success, true);
+  assert.equal(body.message, 'Produk berhasil dinonaktifkan');
+
+  // Verifikasi produk berstatus aktif: false
+  const { body: detail } = await req(
+    baseUrl,
+    'GET',
+    `/api/products/${tempId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(detail.data.aktif, false);
+
+  // Restore produk kembali aktif
+  const { status: restoreStatus, body: restoreBody } = await req(
+    baseUrl,
+    'PATCH',
+    `/api/products/${tempId}/restore`,
+    { token: tokenPemilik }
+  );
+  assert.equal(restoreStatus, 200, JSON.stringify(restoreBody));
+  assert.equal(restoreBody.success, true);
+  assert.equal(restoreBody.data.aktif, true);
+
+  // Hapus permanen
+  const { status: permStatus } = await req(
+    baseUrl,
+    'DELETE',
+    `/api/products/${tempId}?permanent=true`,
+    { token: tokenPemilik }
+  );
+  assert.equal(permStatus, 200);
+
+  // Verifikasi 404 setelah hapus permanen
+  const { status: notFoundStatus } = await req(
+    baseUrl,
+    'GET',
+    `/api/products/${tempId}`,
+    { token: tokenKasir }
+  );
+  assert.equal(notFoundStatus, 404);
 });
 
 // ─── Teardown ────────────────────────────────────────────────────────────────

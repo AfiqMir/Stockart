@@ -3,16 +3,22 @@ const Product = require('../models/Product');
 // GET /api/products
 exports.getProducts = async (req, res) => {
   try {
-    const { search, kategori, barcode } = req.query;
+    const { search, kategori, barcode, aktif } = req.query;
     
     let query = {};
+
+    if (aktif === 'all') {
+      // tampilkan semua status
+    } else if (aktif !== undefined) {
+      query.aktif = aktif === 'true';
+    } else {
+      query.aktif = true;
+    }
     
-    // Exact match untuk alat barcode scanner (sangat cepat karena menggunakan index database)
     if (barcode) {
       query.kodeProduk = barcode;
     }
     
-    // Partial match untuk pencarian manual (ketik nama/kode)
     if (search) {
       query.$or = [
         { nama: { $regex: search, $options: 'i' } },
@@ -43,6 +49,7 @@ exports.getProducts = async (req, res) => {
 exports.getLowStockProducts = async (req, res) => {
   try {
     const products = await Product.find({
+      aktif: true,
       $expr: { $lte: ['$stok', '$stokMinimum'] }
     }).sort({ stok: 1 });
 
@@ -109,7 +116,7 @@ exports.updateProduct = async (req, res) => {
       req.params.id,
       req.body,
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true,
       }
     );
@@ -138,7 +145,16 @@ exports.updateProduct = async (req, res) => {
 // DELETE /api/products/:id
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await Product.findByIdAndDelete(req.params.id);
+    const { permanent } = req.query;
+    const isPermanent = permanent === 'true';
+
+    const product = isPermanent
+      ? await Product.findByIdAndDelete(req.params.id)
+      : await Product.findByIdAndUpdate(
+          req.params.id,
+          { aktif: false },
+          { returnDocument: 'after' }
+        );
 
     if (!product) {
       return res.status(404).json({
@@ -149,7 +165,36 @@ exports.deleteProduct = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Produk berhasil dihapus',
+      message: isPermanent ? 'Produk berhasil dihapus' : 'Produk berhasil dinonaktifkan',
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: 'ID produk tidak valid',
+    });
+  }
+};
+
+// PATCH /api/products/:id/restore
+exports.restoreProduct = async (req, res) => {
+  try {
+    const product = await Product.findByIdAndUpdate(
+      req.params.id,
+      { aktif: true },
+      { returnDocument: 'after' }
+    );
+
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Produk tidak ditemukan',
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Produk berhasil diaktifkan kembali',
+      data: product,
     });
   } catch (error) {
     res.status(400).json({
@@ -167,7 +212,7 @@ exports.restockProduct = async (req, res) => {
     const product = await Product.findByIdAndUpdate(
       req.params.id,
       { $inc: { stok: Number(jumlah) } },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
 
     if (!product) {

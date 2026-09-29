@@ -98,3 +98,21 @@ exports.loginUser = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Lihat Profil Pengguna Aktif
+// @route   GET /api/auth/me
+exports.getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: {
+        _id: req.user._id,
+        nama: req.user.nama,
+        username: req.user.username,
+        role: req.user.role,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
